@@ -1,4 +1,4 @@
-module blursh
+module github.com/zar4za/blursh
 
 go 1.22.5
 
