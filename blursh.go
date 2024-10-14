@@ -76,9 +76,9 @@ func multiplyBasisFunction(xComp int, yComp int, width int, height int, img imag
 		for x := 0; x < width; x++ {
 			basis := math.Cos(math.Pi*float64(xComp)*float64(x)/float64(width)) * math.Cos(math.Pi*float64(yComp)*float64(y)/float64(height))
 			rgba := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
-			result.r += basis * sRGBToLinear(rgba.R)
-			result.g += basis * sRGBToLinear(rgba.G)
-			result.b += basis * sRGBToLinear(rgba.B)
+			result.r += basis * sRGBToLinear[rgba.R]
+			result.g += basis * sRGBToLinear[rgba.G]
+			result.b += basis * sRGBToLinear[rgba.B]
 		}
 	}
 
@@ -95,16 +95,6 @@ func Decode() {
 
 func IsBlurhashValid(blurhash string) bool {
 	return false
-}
-
-func sRGBToLinear(value uint8) float64 {
-	v := float64(value) / 255
-
-	if v <= 0.04045 {
-		return v / 12.92
-	}
-
-	return math.Pow((v+0.055)/1.055, 2.4)
 }
 
 func linearTosRGB(value float64) int {
