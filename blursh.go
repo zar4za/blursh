@@ -3,7 +3,6 @@ package blursh
 import (
 	"errors"
 	"image"
-	"image/color"
 	"math"
 	"strings"
 )
@@ -25,7 +24,6 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	}
 
 	size := img.Bounds().Max
-	// bytesPerRow := bytesPerPixel * width
 	factors := make([]factor, xComp*yComp)
 
 	for i := range factors {
@@ -48,9 +46,9 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 			actualMaximumValue = math.Max(math.Max(math.Max(factor.r, factor.g), factor.b), actualMaximumValue)
 		}
 
-		quantisedMaximumValue := math.Floor(math.Max(0, math.Min(82, math.Floor(actualMaximumValue*166-0.5))))
-		maximumValue = (quantisedMaximumValue + 1) / 166
-		Encode83(&builder, int(quantisedMaximumValue), 1)
+		quantisedMaximumValue := maxInt(0, minInt(82, int(math.Floor(actualMaximumValue*166-0.5))))
+		maximumValue = float64(quantisedMaximumValue+1) / 166
+		Encode83(&builder, quantisedMaximumValue, 1)
 	} else {
 		Encode83(&builder, 0, 1)
 	}
@@ -72,13 +70,21 @@ func multiplyBasisFunction(xComp int, yComp int, width int, height int, img imag
 		normalisation = 1.
 	}
 
+	cosXs := make([]float64, width)
+
+	for x := range cosXs {
+		cosXs[x] = math.Cos(math.Pi * float64(xComp) * float64(x) / float64(width))
+	}
+
 	for y := 0; y < height; y++ {
+		cosY := math.Cos(math.Pi * float64(yComp) * float64(y) / float64(height))
+
 		for x := 0; x < width; x++ {
-			basis := math.Cos(math.Pi*float64(xComp)*float64(x)/float64(width)) * math.Cos(math.Pi*float64(yComp)*float64(y)/float64(height))
-			rgba := color.RGBAModel.Convert(img.At(x, y)).(color.RGBA)
-			result.r += basis * sRGBToLinear[rgba.R]
-			result.g += basis * sRGBToLinear[rgba.G]
-			result.b += basis * sRGBToLinear[rgba.B]
+			basis := cosXs[x] * cosY
+			r, g, b, _ := img.At(x, y).RGBA()
+			result.r += basis * sRGBToLinear[uint8(r>>8)]
+			result.g += basis * sRGBToLinear[uint8(g>>8)]
+			result.b += basis * sRGBToLinear[uint8(b>>8)]
 		}
 	}
 
@@ -101,10 +107,9 @@ func linearTosRGB(value float64) int {
 	v := math.Max(0, math.Min(1, value))
 
 	if v <= 0.0031308 {
-		return int(math.Trunc(v*12.92*255 + 0.5))
-	} else {
-		return int(math.Trunc((1.055*math.Pow(v, 1/2.4)-0.055)*255 + 0.5))
+		return int(v*12.92*255 + 0.5)
 	}
+	return int((1.055*math.Pow(v, 1/2.4)-0.055)*255 + 0.5)
 }
 
 func encodeDC(value factor) int {
@@ -128,4 +133,18 @@ func signPow(val float64, exp float64) float64 {
 	}
 
 	return sign * math.Pow(math.Abs(val), exp)
+}
+
+func maxInt(left int, right int) int {
+	if left > right {
+		return left
+	}
+	return right
+}
+
+func minInt(left int, right int) int {
+	if left < right {
+		return left
+	}
+	return right
 }
