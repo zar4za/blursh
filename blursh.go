@@ -104,12 +104,15 @@ func IsBlurhashValid(blurhash string) bool {
 }
 
 func linearTosRGB(value float64) int {
-	v := math.Max(0, math.Min(1, value))
-
-	if v <= 0.0031308 {
-		return int(v*12.92*255 + 0.5)
+	if value < 0 {
+		return 0
+	} else if value < 0.0031308 {
+		return int(value*12.92*255 + 0.5)
+	} else if value > 1 {
+		return 255
 	}
-	return int((1.055*math.Pow(v, 1/2.4)-0.055)*255 + 0.5)
+
+	return int((1.055*math.Pow(value, 0.41666666666)-0.055)*255 + 0.5)
 }
 
 func encodeDC(value factor) int {
