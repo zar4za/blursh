@@ -130,12 +130,7 @@ func encodeAC(value factor, max float64) int {
 }
 
 func signPow(val float64, exp float64) float64 {
-	sign := 1.
-	if val < 0 {
-		sign = -1.
-	}
-
-	return sign * math.Pow(math.Abs(val), exp)
+	return math.Copysign(math.Pow(math.Abs(val), exp), val)
 }
 
 func maxInt(left int, right int) int {
