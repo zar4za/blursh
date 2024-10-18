@@ -27,8 +27,9 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	factors := make([]factor, xComp*yComp)
 
 	for i := range factors {
-		y := i % yComp // row
-		x := i / yComp // pix in row
+		y := i / xComp
+		x := i % xComp
+
 		factors[i] = multiplyBasisFunction(x, y, size.X, size.Y, img)
 	}
 
