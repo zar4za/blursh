@@ -37,7 +37,7 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	builder := strings.Builder{}
 
 	sizeFlag := (xComp - 1) + (yComp-1)*9
-	Encode83(&builder, sizeFlag, 1)
+	encode83(&builder, sizeFlag, 1)
 	maximumValue := 1.
 
 	if len(ac) > 0 {
@@ -48,15 +48,15 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 
 		quantisedMaximumValue := maxInt(0, minInt(82, int(math.Floor(actualMaximumValue*166-0.5))))
 		maximumValue = float64(quantisedMaximumValue+1) / 166
-		Encode83(&builder, quantisedMaximumValue, 1)
+		encode83(&builder, quantisedMaximumValue, 1)
 	} else {
-		Encode83(&builder, 0, 1)
+		encode83(&builder, 0, 1)
 	}
 
-	Encode83(&builder, encodeDC(dc), 4)
+	encode83(&builder, encodeDC(dc), 4)
 
 	for _, factor := range ac {
-		Encode83(&builder, encodeAC(factor, maximumValue), 2)
+		encode83(&builder, encodeAC(factor, maximumValue), 2)
 	}
 
 	return builder.String(), nil

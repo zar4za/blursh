@@ -19,7 +19,7 @@ var (
 	}
 )
 
-func Encode83(builder *strings.Builder, value int, length int) {
+func encode83(builder *strings.Builder, value int, length int) {
 	divisor := 1
 
 	for i := 0; i < length-1; i++ {
@@ -33,7 +33,7 @@ func Encode83(builder *strings.Builder, value int, length int) {
 	}
 }
 
-func Decode83(hash string) int {
+func decode83(hash string) int {
 	// TODO: pls rewrite this misunderstanding
 
 	value := 0
