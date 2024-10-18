@@ -1,17 +1,17 @@
 package blursh_test
 
 import (
-	"blursh"
 	"image"
 	_ "image/jpeg"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/zar4za/blursh"
 )
 
 func setUp() (image.Image, error) {
-	file, err := os.Open("gopher.jpg")
+	file, _ := os.Open("gopher.jpg")
 	defer file.Close()
 	img, _, err := image.Decode(file)
 	return img, err
