@@ -13,6 +13,10 @@ type factor struct {
 	b float64
 }
 
+type pixel struct {
+	r, g, b uint8
+}
+
 func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	if xComp < 1 || xComp > 9 {
 		return "", errors.New("xComp must be in range from 1 to 9")
@@ -21,14 +25,14 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 		return "", errors.New("yComp must be in range from 1 to 9")
 	}
 
-	size := img.Bounds().Max
+	pixels, width, height := imageToPixels(img)
 	factors := make([]factor, xComp*yComp)
 
 	for i := range factors {
 		y := i / xComp
 		x := i % xComp
 
-		factors[i] = multiplyBasisFunction(x, y, size.X, size.Y, img)
+		factors[i] = multiplyBasisFunction(x, y, width, height, pixels)
 	}
 
 	dc := factors[0]
@@ -61,7 +65,7 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	return builder.String(), nil
 }
 
-func multiplyBasisFunction(xComp int, yComp int, width int, height int, img image.Image) factor {
+func multiplyBasisFunction(xComp int, yComp int, width int, height int, pixels []pixel) factor {
 	result := factor{}
 	normalisation := 2.
 
@@ -80,10 +84,10 @@ func multiplyBasisFunction(xComp int, yComp int, width int, height int, img imag
 
 		for x := 0; x < width; x++ {
 			basis := cosXs[x] * cosY
-			r, g, b, _ := img.At(x, y).RGBA()
-			result.r += basis * sRGBToLinear[uint8(r>>8)]
-			result.g += basis * sRGBToLinear[uint8(g>>8)]
-			result.b += basis * sRGBToLinear[uint8(b>>8)]
+			pixel := pixels[y*width+x]
+			result.r += basis * sRGBToLinear[pixel.r]
+			result.g += basis * sRGBToLinear[pixel.g]
+			result.b += basis * sRGBToLinear[pixel.b]
 		}
 	}
 
@@ -130,4 +134,22 @@ func encodeAC(value factor, max float64) int {
 
 func signPow(val float64, exp float64) float64 {
 	return math.Copysign(math.Pow(math.Abs(val), exp), val)
+}
+
+func imageToPixels(img image.Image) (pixels []pixel, width int, height int) {
+	maxPoint := img.Bounds().Max
+	pixels = make([]pixel, maxPoint.X*maxPoint.Y)
+
+	for y := 0; y < maxPoint.Y; y++ {
+		for x := 0; x < maxPoint.X; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			pixels[y*maxPoint.X+x] = pixel{
+				r: uint8(r >> 8),
+				g: uint8(g >> 8),
+				b: uint8(b >> 8),
+			}
+		}
+	}
+
+	return pixels, maxPoint.X, maxPoint.Y
 }
