@@ -38,7 +38,7 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	dc := factors[0]
 	ac := factors[1:]
 	builder := strings.Builder{}
-
+	builder.Grow(4 + xComp*yComp*2)
 	sizeFlag := (xComp - 1) + (yComp-1)*9
 	encode83(&builder, sizeFlag, 1)
 	maximumValue := 1.
