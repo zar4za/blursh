@@ -6,6 +6,7 @@ import (
 	"image/color"
 	"math"
 	"strings"
+	"sync"
 )
 
 type factor struct {
@@ -28,15 +29,16 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 
 	pixels, width, height := imageToPixels(img)
 	factors := make([]factor, xComp*yComp)
+	wg := sync.WaitGroup{}
 
-	for i := range factors {
-		y := i / xComp
-		x := i % xComp
-
-		factors[i] = multiplyBasisFunction(x, y, width, height, pixels)
+	for y := 0; y < yComp; y++ {
+		wg.Add(xComp)
+		for x := 0; x < xComp; x++ {
+			go multiplyBasisFunction(pixels, x, y, width, height, &factors[y*xComp+x], &wg)
+		}
+		wg.Wait() // limit goroutines by xComp amount
 	}
 
-	dc := factors[0]
 	ac := factors[1:]
 	builder := strings.Builder{}
 	builder.Grow(4 + xComp*yComp*2)
@@ -57,7 +59,7 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 		encode83(&builder, 0, 1)
 	}
 
-	encode83(&builder, encodeDC(dc), 4)
+	encode83(&builder, encodeDC(factors[0]), 4)
 
 	for _, factor := range ac {
 		encode83(&builder, encodeAC(factor, maximumValue), 2)
@@ -66,7 +68,8 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	return builder.String(), nil
 }
 
-func multiplyBasisFunction(xComp int, yComp int, width int, height int, pixels []pixel) factor {
+func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct *factor, wg *sync.WaitGroup) {
+	defer wg.Done()
 	result := factor{}
 	normalisation := 2.
 
@@ -96,7 +99,7 @@ func multiplyBasisFunction(xComp int, yComp int, width int, height int, pixels [
 	result.r *= scale
 	result.g *= scale
 	result.b *= scale
-	return result
+	*fct = result
 }
 
 func Decode() {
