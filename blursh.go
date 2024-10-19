@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-const bytesPerPixel = 4
-
 type factor struct {
 	r float64
 	g float64
@@ -47,9 +45,9 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 			actualMaximumValue = math.Max(math.Max(math.Max(factor.r, factor.g), factor.b), actualMaximumValue)
 		}
 
-		quantisedMaximumValue := maxInt(0, minInt(82, int(math.Floor(actualMaximumValue*166-0.5))))
-		maximumValue = float64(quantisedMaximumValue+1) / 166
-		encode83(&builder, quantisedMaximumValue, 1)
+		quantisedMaximumValue := math.Max(0, math.Min(82, actualMaximumValue*166-0.5))
+		maximumValue = (quantisedMaximumValue + 1) / 166
+		encode83(&builder, int(quantisedMaximumValue), 1)
 	} else {
 		encode83(&builder, 0, 1)
 	}
@@ -132,18 +130,4 @@ func encodeAC(value factor, max float64) int {
 
 func signPow(val float64, exp float64) float64 {
 	return math.Copysign(math.Pow(math.Abs(val), exp), val)
-}
-
-func maxInt(left int, right int) int {
-	if left > right {
-		return left
-	}
-	return right
-}
-
-func minInt(left int, right int) int {
-	if left < right {
-		return left
-	}
-	return right
 }

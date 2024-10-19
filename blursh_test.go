@@ -23,6 +23,7 @@ func TestEncode(t *testing.T) {
 		"LLGcAQ_N=_n3^+M_R+bcofayWBof", // blurha.sh
 		"LLGcAQ_N=_iv^+MxR+bcoff6WBof", // python package https://github.com/woltapp/blurhash-python
 		"LLGcAQ_N=_n3^+MxR+bcoff6WBof", // no visual differences
+		"LLGcAQ_N=_n3^+M_R+bcoff6WBof",
 	}
 
 	img, err := setUp()
