@@ -140,48 +140,63 @@ func signPow(val float64, exp float64) float64 {
 	return math.Copysign(math.Pow(math.Abs(val), exp), val)
 }
 
-func imageToPixels(img image.Image) (pixels []pixel, width int, height int) {
-	maxPoint := img.Bounds().Max
-	pixels = make([]pixel, maxPoint.X*maxPoint.Y)
+func rGBAToPixels(img image.RGBA) (pixels []pixel, width int, height int) {
+	size := img.Rect.Max
+	pixels = make([]pixel, size.X*size.Y)
 
-	switch img := img.(type) {
-	case *image.RGBA:
-		for y := 0; y < maxPoint.Y; y++ {
-			for x := 0; x < maxPoint.X; x++ {
-				i := img.PixOffset(x, y)
-				s := img.Pix[i : i+3 : i+3]
-				pixels[y*maxPoint.X+x] = pixel{
-					r: s[0],
-					g: s[1],
-					b: s[2],
-				}
-			}
-		}
-	case *image.YCbCr:
-		for y := 0; y < maxPoint.Y; y++ {
-			for x := 0; x < maxPoint.X; x++ {
-				yi := img.YOffset(x, y)
-				ci := img.COffset(x, y)
-				r, g, b := color.YCbCrToRGB(img.Y[yi], img.Cb[ci], img.Cr[ci])
-				pixels[y*maxPoint.X+x] = pixel{
-					r: r,
-					g: g,
-					b: b,
-				}
-			}
-		}
-	default:
-		for y := 0; y < maxPoint.Y; y++ {
-			for x := 0; x < maxPoint.X; x++ {
-				r, g, b, _ := img.At(x, y).RGBA()
-				pixels[y*maxPoint.X+x] = pixel{
-					r: uint8(r >> 8),
-					g: uint8(g >> 8),
-					b: uint8(b >> 8),
-				}
+	for y := 0; y < size.Y; y++ {
+		for x := 0; x < size.X; x++ {
+			i := img.PixOffset(x, y)
+			pixels[y*size.X+x] = pixel{
+				r: img.Pix[i],
+				g: img.Pix[i+1],
+				b: img.Pix[i+2],
 			}
 		}
 	}
 
-	return pixels, maxPoint.X, maxPoint.Y
+	return pixels, size.X, size.Y
+}
+
+func yCbCrToPixels(img image.YCbCr) (pixels []pixel, width int, height int) {
+	size := img.Rect.Max
+	pixels = make([]pixel, size.X*size.Y)
+
+	for y := 0; y < size.Y; y++ {
+		for x := 0; x < size.X; x++ {
+			yi := img.YOffset(x, y)
+			ci := img.COffset(x, y)
+			r, g, b := color.YCbCrToRGB(img.Y[yi], img.Cb[ci], img.Cr[ci])
+			pixels[y*size.X+x] = pixel{
+				r: r,
+				g: g,
+				b: b,
+			}
+		}
+	}
+
+	return pixels, size.X, size.Y
+}
+
+func imageToPixels(img image.Image) (pixels []pixel, width int, height int) {
+	if img, ok := img.(*image.RGBA); ok {
+		return rGBAToPixels(*img)
+	}
+	if img, ok := img.(*image.YCbCr); ok {
+		return yCbCrToPixels(*img)
+	}
+
+	size := img.Bounds().Max
+	pixels = make([]pixel, size.X*size.Y)
+	for y := 0; y < size.Y; y++ {
+		for x := 0; x < size.X; x++ {
+			r, g, b, _ := img.At(x, y).RGBA()
+			pixels[y*size.X+x] = pixel{
+				r: uint8(r >> 8),
+				g: uint8(g >> 8),
+				b: uint8(b >> 8),
+			}
+		}
+	}
+	return pixels, size.X, size.Y
 }
