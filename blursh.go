@@ -32,11 +32,10 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	wg := sync.WaitGroup{}
 
 	for y := 0; y < yComp; y++ {
-		wg.Add(xComp)
 		for x := 0; x < xComp; x++ {
+			wg.Add(1)
 			go multiplyBasisFunction(pixels, x, y, width, height, &factors[y*xComp+x], &wg)
 		}
-		wg.Wait() // limit goroutines by xComp amount
 	}
 
 	ac := factors[1:]
@@ -45,6 +44,8 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	sizeFlag := (xComp - 1) + (yComp-1)*9
 	encode83(&builder, sizeFlag, 1)
 	maximumValue := 1.
+
+	wg.Wait()
 
 	if len(ac) > 0 {
 		actualMaximumValue := 0.
