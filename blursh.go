@@ -43,23 +43,17 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	builder.Grow(4 + xComp*yComp*2)
 	sizeFlag := (xComp - 1) + (yComp-1)*9
 	encode83(&builder, sizeFlag, 1)
-	maximumValue := 1.
 
 	wg.Wait()
 
-	if len(ac) > 0 {
-		actualMaximumValue := 0.
-		for _, factor := range ac {
-			actualMaximumValue = math.Max(math.Max(math.Max(factor.r, factor.g), factor.b), actualMaximumValue)
-		}
-
-		quantisedMaximumValue := math.Max(0, math.Min(82, actualMaximumValue*166-0.5))
-		maximumValue = (quantisedMaximumValue + 1) / 166
-		encode83(&builder, int(quantisedMaximumValue), 1)
-	} else {
-		encode83(&builder, 0, 1)
+	actualMaximumValue := 0.
+	for _, factor := range ac {
+		actualMaximumValue = math.Max(math.Max(math.Max(factor.r, factor.g), factor.b), actualMaximumValue)
 	}
 
+	quantisedMaximumValue := math.Max(0, math.Min(82, actualMaximumValue*166-0.5))
+	maximumValue := (quantisedMaximumValue + 1) / 166
+	encode83(&builder, int(quantisedMaximumValue), 1)
 	encode83(&builder, encodeDC(factors[0]), 4)
 
 	for _, factor := range ac {
