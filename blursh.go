@@ -72,24 +72,27 @@ func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct 
 		normalisation = 1.
 	}
 
-	cosXs := make([]float64, width)
-
 	thetaX := math.Pi * float64(xComp) / float64(width)
 	thetaY := math.Pi * float64(yComp) / float64(height)
-
-	for x := range cosXs {
+	cosXs := make([]float64, width)
+	for x := range width {
 		cosXs[x] = math.Cos(thetaX * float64(x))
 	}
 
+	cosYs := make([]float64, height)
 	for y := range height {
-		cosY := math.Cos(thetaY * float64(y))
+		cosYs[y] = math.Cos(thetaY * float64(y))
+	}
 
+	// Tight inner loops: avoid y*width for every x and reuse row offset
+	for y := range height {
+		row := y * width
 		for x := range width {
-			basis := cosXs[x] * cosY
-			pixel := pixels[y*width+x]
-			result.r += basis * sRGBToLinear[pixel.r]
-			result.g += basis * sRGBToLinear[pixel.g]
-			result.b += basis * sRGBToLinear[pixel.b]
+			basis := cosXs[x] * cosYs[y]
+			p := pixels[row+x]
+			result.r += basis * sRGBToLinear[p.r]
+			result.g += basis * sRGBToLinear[p.g]
+			result.b += basis * sRGBToLinear[p.b]
 		}
 	}
 
@@ -127,10 +130,10 @@ func encodeDC(value factor) int {
 	return (roundedR << 16) + (roundedG << 8) + roundedB
 }
 
-func encodeAC(value factor, max float64) int {
-	quantR := int(math.Floor(math.Max(0, math.Min(18, math.Floor(signPow(value.r/max, 0.5)*9+9.5)))))
-	quantG := int(math.Floor(math.Max(0, math.Min(18, math.Floor(signPow(value.g/max, 0.5)*9+9.5)))))
-	quantB := int(math.Floor(math.Max(0, math.Min(18, math.Floor(signPow(value.b/max, 0.5)*9+9.5)))))
+func encodeAC(value factor, mx float64) int {
+	quantR := max(0, min(18, int(math.Floor(signPow(value.r/mx, 0.5)*9+9.5))))
+	quantG := max(0, min(18, int(math.Floor(signPow(value.g/mx, 0.5)*9+9.5))))
+	quantB := max(0, min(18, int(math.Floor(signPow(value.b/mx, 0.5)*9+9.5))))
 	return quantR*19*19 + quantG*19 + quantB
 }
 
