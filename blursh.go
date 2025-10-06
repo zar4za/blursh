@@ -31,8 +31,8 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 	factors := make([]factor, xComp*yComp)
 	wg := sync.WaitGroup{}
 
-	for y := 0; y < yComp; y++ {
-		for x := 0; x < xComp; x++ {
+	for y := range yComp {
+		for x := range xComp {
 			wg.Add(1)
 			go multiplyBasisFunction(pixels, x, y, width, height, &factors[y*xComp+x], &wg)
 		}
@@ -74,14 +74,17 @@ func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct 
 
 	cosXs := make([]float64, width)
 
+	thetaX := math.Pi * float64(xComp) / float64(width)
+	thetaY := math.Pi * float64(yComp) / float64(height)
+
 	for x := range cosXs {
-		cosXs[x] = math.Cos(math.Pi * float64(xComp) * float64(x) / float64(width))
+		cosXs[x] = math.Cos(thetaX * float64(x))
 	}
 
-	for y := 0; y < height; y++ {
-		cosY := math.Cos(math.Pi * float64(yComp) * float64(y) / float64(height))
+	for y := range height {
+		cosY := math.Cos(thetaY * float64(y))
 
-		for x := 0; x < width; x++ {
+		for x := range width {
 			basis := cosXs[x] * cosY
 			pixel := pixels[y*width+x]
 			result.r += basis * sRGBToLinear[pixel.r]
