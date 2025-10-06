@@ -1,11 +1,12 @@
 package blursh
 
 import (
-	"bytes"
 	"errors"
 	"image"
 	"image/color"
 	"math"
+	"strings"
+	"sync"
 )
 
 type factor struct {
@@ -28,38 +29,42 @@ func Encode(img image.Image, xComp int, yComp int) (string, error) {
 
 	pixels, width, height := imageToPixels(img)
 	factors := make([]factor, xComp*yComp)
+	wg := sync.WaitGroup{}
 
-	for y := range yComp {
-		for x := range xComp {
-			multiplyBasisFunction(pixels, x, y, width, height, &factors[y*xComp+x])
+	for y := 0; y < yComp; y++ {
+		for x := 0; x < xComp; x++ {
+			wg.Add(1)
+			go multiplyBasisFunction(pixels, x, y, width, height, &factors[y*xComp+x], &wg)
 		}
 	}
 
 	ac := factors[1:]
-
-	buffer := bytes.Buffer{}
-	buffer.Grow(4 + xComp*yComp*2)
+	builder := strings.Builder{}
+	builder.Grow(4 + xComp*yComp*2)
 	sizeFlag := (xComp - 1) + (yComp-1)*9
-	encode83(buffer, sizeFlag, 1)
+	encode83(&builder, sizeFlag, 1)
+
+	wg.Wait()
 
 	actualMaximumValue := 0.
 	for _, factor := range ac {
-		actualMaximumValue = max(max(max(factor.r, factor.g), factor.b), actualMaximumValue)
+		actualMaximumValue = math.Max(math.Max(math.Max(factor.r, factor.g), factor.b), actualMaximumValue)
 	}
 
-	quantisedMaximumValue := max(0, min(82, actualMaximumValue*166-0.5))
+	quantisedMaximumValue := math.Max(0, math.Min(82, actualMaximumValue*166-0.5))
 	maximumValue := (quantisedMaximumValue + 1) / 166
-	encode83(buffer, int(quantisedMaximumValue), 1)
-	encode83(buffer, encodeDC(factors[0]), 4)
+	encode83(&builder, int(quantisedMaximumValue), 1)
+	encode83(&builder, encodeDC(factors[0]), 4)
 
 	for _, factor := range ac {
-		encode83(buffer, encodeAC(factor, maximumValue), 2)
+		encode83(&builder, encodeAC(factor, maximumValue), 2)
 	}
 
-	return buffer.String(), nil
+	return builder.String(), nil
 }
 
-func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct *factor) {
+func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct *factor, wg *sync.WaitGroup) {
+	defer wg.Done()
 	result := factor{}
 	normalisation := 2.
 
@@ -68,35 +73,21 @@ func multiplyBasisFunction(pixels []pixel, xComp, yComp, width, height int, fct 
 	}
 
 	cosXs := make([]float64, width)
-	thetaX := math.Pi * float64(xComp) / float64(width)
-	ctX := math.Cos(thetaX)
-	stX := math.Sin(thetaX)
-	cX, sX := 1.0, 0.0
-	for x := range width {
-		cosXs[x] = cX
-		ncX := cX*ctX - sX*stX
-		nsX := sX*ctX + cX*stX
-		cX, sX = ncX, nsX
+
+	for x := range cosXs {
+		cosXs[x] = math.Cos(math.Pi * float64(xComp) * float64(x) / float64(width))
 	}
 
-	thetaY := math.Pi * float64(yComp) / float64(height)
-	ctY := math.Cos(thetaY)
-	stY := math.Sin(thetaY)
-	cY, sY := 1.0, 0.0
+	for y := 0; y < height; y++ {
+		cosY := math.Cos(math.Pi * float64(yComp) * float64(y) / float64(height))
 
-	for y := range height {
-		cosY := cY
-		for x := range width {
+		for x := 0; x < width; x++ {
 			basis := cosXs[x] * cosY
-			px := pixels[y*width+x]
-			result.r += basis * sRGBToLinear[px.r]
-			result.g += basis * sRGBToLinear[px.g]
-			result.b += basis * sRGBToLinear[px.b]
+			pixel := pixels[y*width+x]
+			result.r += basis * sRGBToLinear[pixel.r]
+			result.g += basis * sRGBToLinear[pixel.g]
+			result.b += basis * sRGBToLinear[pixel.b]
 		}
-
-		ncY := cY*ctY - sY*stY
-		nsY := sY*ctY + cY*stY
-		cY, sY = ncY, nsY
 	}
 
 	scale := normalisation / float64(width*height)
