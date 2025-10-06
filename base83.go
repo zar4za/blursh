@@ -1,7 +1,7 @@
 package blursh
 
 import (
-	"strings"
+	"bytes"
 )
 
 var (
@@ -19,17 +19,17 @@ var (
 	}
 )
 
-func encode83(builder *strings.Builder, value int, length int) {
+func encode83(buffer bytes.Buffer, value int, length int) {
 	divisor := 1
 
 	for i := 0; i < length-1; i++ {
 		divisor *= 83
 	}
 
-	for i := 0; i < length; i++ {
+	for range length {
 		digit := (value / divisor) % 83
 		divisor /= 83
-		builder.WriteByte(digitCharacters[digit])
+		buffer.WriteByte(digitCharacters[digit])
 	}
 }
 
